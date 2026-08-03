@@ -29,6 +29,52 @@ def init_db(db_path ="data/quotes.db" ):
     connection.commit()
     connection.close()
     print("Database and tables initialized successfully!")
+
+print(f" Database schema initialized at: {db_path}")
+
+
+def insert_quotes(quotes_data: list[dict], db_path: Path = DB_PATH) -> None:
+    """Inserts scraped quote dictionaries into the SQLite database."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    inserted_count = 0
+
+    for item in quotes_data:
+        author_name = item["author"]
+        quote_text = item["quote"]
+        # Convert tag list to JSON string for SQLite storage
+        tags_json = json.dumps(item.get("tags", []))
+
+        # 1. Insert or ignore author to get author_id
+        cursor.execute(
+            "INSERT OR IGNORE INTO authors (name) VALUES (?)",
+            (author_name,)
+        )
+        
+        cursor.execute(
+            "SELECT author_id FROM authors WHERE name = ?",
+            (author_name,)
+        )
+        author_id = cursor.fetchone()[0]
+
+        # 2. Insert quote associated with author_id
+        try:
+            cursor.execute(
+                """
+                INSERT INTO quotes (author_id, quote_text, tags)
+                VALUES (?, ?, ?)
+                """,
+                (author_id, quote_text, tags_json)
+            )
+            inserted_count += 1
+        except sqlite3.IntegrityError:
+            # Skip duplicate quote text
+            pass
+
+    conn.commit()
+    conn.close()
+    print(f" Successfully inserted {inserted_count} quotes into SQLite!\n")
                    
 if __name__ == "__main__":
     init_db()
