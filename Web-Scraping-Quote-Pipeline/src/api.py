@@ -5,17 +5,22 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 
 app = FastAPI(title="Quotes API")
-DB_PATH = Path("data/quotes.db")
+
+# Dynamically locate data/quotes.db relative to this file's folder
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "data" / "quotes.db"
 
 
 def get_db_connection():
     if not DB_PATH.exists():
         raise HTTPException(
-            status_code=500, detail="Database file not found."
+            status_code=500, detail=f"Database file not found at {DB_PATH}"
         )
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+# (Keep the rest of your get_quotes and read_root endpoints the same)
 
 
 @app.get("/")
